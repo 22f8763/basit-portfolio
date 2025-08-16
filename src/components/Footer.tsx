@@ -364,6 +364,16 @@ const Footer = () => {
                   </motion.p>
                 )}
               </AnimatePresence>
+              <motion.a
+                href="#"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4 }}
+              >
+                Terms of Service
+              </motion.a>
             </motion.form>
           </motion.div>
         </div>
@@ -378,8 +388,6 @@ const Footer = () => {
               transition={{ delay: 0.2 }}
             >
               &copy; {currentYear} Muhammad Basit. All rights reserved.
-              <span className="mx-2">•</span>
-              
             </motion.p>
 
             <div className="flex items-center space-x-6">
@@ -399,7 +407,7 @@ const Footer = () => {
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.3 }}
               >
                 Terms of Service
               </motion.a>

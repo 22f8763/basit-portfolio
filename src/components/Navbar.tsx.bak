@@ -1,0 +1,213 @@
+'use client';
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Menu, X, Moon, Sun } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
+
+const navItems = [
+  { name: 'Home', href: '/' },
+  { name: 'About', href: '/#about' },
+  { name: 'Projects', href: '/#projects' },
+  { name: 'Skills', href: '/#skills' },
+  { name: 'Experience', href: '/#experience' },
+  { name: 'Contact', href: '/#contact' },
+];
+
+// Memoize the navigation items to prevent unnecessary re-renders
+const NavItem = ({ item, pathname }: { item: typeof navItems[0]; pathname: string }) => (
+  <Link
+    href={item.href}
+    className={cn(
+      'px-3 py-2 text-sm font-medium rounded-md transition-colors',
+      pathname === item.href
+        ? 'text-primary font-semibold'
+        : 'text-foreground/70 hover:text-primary'
+    )}
+    prefetch={item.href === '/' ? true : undefined}
+  >
+    {item.name}
+  </Link>
+);
+
+const MobileNavItem = ({ item, pathname }: { item: typeof navItems[0]; pathname: string }) => (
+  <Link
+    href={item.href}
+    className={cn(
+      'block px-3 py-2 rounded-md text-base font-medium',
+      pathname === item.href
+        ? 'bg-foreground/5 text-primary'
+        : 'text-foreground/70 hover:bg-foreground/5 hover:text-primary'
+    )}
+    prefetch={item.href === '/' ? true : undefined}
+  >
+    {item.name}
+  </Link>
+);
+
+const Navbar = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const pathname = usePathname();
+
+  // Memoize the theme toggle function
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  }, [theme, setTheme]);
+
+  // Track scroll position for navbar background
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    // Use passive scroll for better performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Disable body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Memoize the mobile menu toggle to prevent unnecessary re-renders
+  const toggleMobileMenu = useCallback(() => {
+    setIsMobileMenuOpen(prev => !prev);
+  }, []);
+
+  // Memoize the ThemeIcon component to prevent unnecessary re-renders
+  const ThemeIcon = useMemo(() => {
+    if (!isMounted) return null;
+    return theme === 'dark' ? (
+      <Sun className="h-5 w-5" />
+    ) : (
+      <Moon className="h-5 w-5" />
+    );
+  }, [theme, isMounted]);
+
+  return (
+    <LazyMotion features={domAnimation}>
+      <m.header
+        className={cn(
+          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+          isScrolled ? 'bg-background/80 backdrop-blur-sm shadow-sm' : 'bg-transparent',
+          'supports-[backdrop-filter]:bg-background/60'
+        )}
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        style={{ willChange: 'transform, background-color' }}
+      >
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="flex h-16 items-center justify-between">
+            {/* Logo */}
+            <Link 
+              href="/" 
+              className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent"
+              aria-label="Home"
+              prefetch
+            >
+              MB
+            </Link>
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-1">
+              {navItems.map((item) => (
+                <NavItem key={item.href} item={item} pathname={pathname} />
+              ))}
+            </nav>
+
+            <div className="flex items-center space-x-2">
+              {/* Theme Toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="text-foreground/70 hover:bg-foreground/5"
+                aria-label="Toggle theme"
+              >
+                {ThemeIcon}
+              </Button>
+
+              {/* Mobile menu button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-foreground/70 hover:bg-foreground/5"
+                onClick={toggleMobileMenu}
+                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <m.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="md:hidden fixed inset-x-0 top-16 bg-background/95 backdrop-blur-sm border-b border-foreground/10 shadow-lg"
+              style={{ willChange: 'opacity, transform' }}
+            >
+              <div className="px-2 pt-2 pb-3 space-y-1">
+                {navItems.map((item) => (
+                  <MobileNavItem key={item.href} item={item} pathname={pathname} />
+                ))}
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {/* Scroll Progress Bar - Only render when scrolled */}
+        {isScrolled && (
+          <m.div
+            className="h-0.5 bg-gradient-to-r from-primary to-purple-500"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            style={{ 
+              transformOrigin: 'left center',
+              willChange: 'transform' 
+            }}
+          />
+        )}
+      </m.header>
+    </LazyMotion>
+  );
+};
+
+export default Navbar;

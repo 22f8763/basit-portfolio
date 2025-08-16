@@ -1,0 +1,133 @@
+'use client';
+
+import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
+import { usePathname } from 'next/navigation';
+import { ReactNode, useEffect, useState, useCallback } from 'react';
+
+type PageTransitionProps = {
+  children: ReactNode;
+};
+
+// Optimized loader component to prevent re-renders
+const Loader = () => (
+  <m.div
+    className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.2 }}
+    style={{ willChange: 'opacity' }}
+  >
+    <div className="flex flex-col items-center">
+      <m.div
+        className="w-12 h-12 border-3 border-primary/30 border-t-primary border-r-primary rounded-full"
+        animate={{ 
+          rotate: 360,
+        }}
+        transition={{ 
+          rotate: { 
+            duration: 0.8, 
+            repeat: Infinity, 
+            ease: 'linear',
+            repeatType: 'loop' as const
+          }
+        }}
+        style={{
+          willChange: 'transform, border-color'
+        }}
+      />
+    </div>
+  </m.div>
+);
+
+// Memoized page content to prevent unnecessary re-renders
+const PageContent = ({ children, pathname }: { children: ReactNode; pathname: string }) => (
+  <m.div
+    key={pathname}
+    variants={{
+      hidden: { opacity: 0, y: 10 },
+      visible: { 
+        opacity: 1, 
+        y: 0,
+        transition: {
+          type: 'tween',
+          ease: 'easeOut',
+          duration: 0.2
+        }
+      },
+      exit: { 
+        opacity: 0, 
+        y: -10,
+        transition: {
+          type: 'tween',
+          ease: 'easeIn',
+          duration: 0.15
+        }
+      }
+    }}
+    initial="hidden"
+    animate="visible"
+    exit="exit"
+    className="min-h-screen"
+    style={{ willChange: 'opacity, transform' }}
+  >
+    {children}
+  </m.div>
+);
+
+export const PageTransition = ({ children }: PageTransitionProps) => {
+  const pathname = usePathname();
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPath, setCurrentPath] = useState(pathname);
+  const [isFirstMount, setIsFirstMount] = useState(true);
+
+  // Handle route changes with requestAnimationFrame for smoother transitions
+  const handleRouteChange = useCallback(() => {
+    if (pathname !== currentPath) {
+      const rafId = requestAnimationFrame(() => {
+        setIsLoading(true);
+        setCurrentPath(pathname);
+        
+        // Only show loader for non-initial loads and for more than 300ms
+        const timer = setTimeout(() => {
+          setIsLoading(false);
+          if (isFirstMount) setIsFirstMount(false);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+      });
+      
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [pathname, currentPath, isFirstMount]);
+
+  useEffect(() => {
+    handleRouteChange();
+  }, [handleRouteChange]);
+
+  // Skip initial animation on first mount
+  if (isFirstMount) {
+    return (
+      <LazyMotion features={domAnimation}>
+        <div className="min-h-screen">
+          {children}
+        </div>
+      </LazyMotion>
+    );
+  }
+
+  return (
+    <LazyMotion features={domAnimation}>
+      <AnimatePresence mode="wait" initial={false}>
+        <PageContent pathname={pathname}>
+          {children}
+        </PageContent>
+      </AnimatePresence>
+      
+      {/* Only show loader after initial mount */}
+      <AnimatePresence>
+        {isLoading && <Loader />}
+      </AnimatePresence>
+    </LazyMotion>
+  );
+};

@@ -1,0 +1,198 @@
+'use client';
+
+import { useState, useCallback, memo } from 'react';
+import { motion, LazyMotion, domAnimation } from 'framer-motion';
+import { Mail, Github, Twitter, Linkedin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
+
+// Memoized social links to prevent unnecessary re-renders
+const SocialLinks = memo(() => (
+  <div className="flex space-x-4">
+    <a
+      href="https://github.com/yourusername"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-foreground/70 hover:text-primary transition-colors"
+      aria-label="GitHub"
+    >
+      <Github className="h-5 w-5" />
+    </a>
+    <a
+      href="https://twitter.com/yourusername"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-foreground/70 hover:text-primary transition-colors"
+      aria-label="Twitter"
+    >
+      <Twitter className="h-5 w-5" />
+    </a>
+    <a
+      href="https://linkedin.com/in/yourusername"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-foreground/70 hover:text-primary transition-colors"
+      aria-label="LinkedIn"
+    >
+      <Linkedin className="h-5 w-5" />
+    </a>
+  </div>
+));
+
+// Memoized footer links
+const FooterLinks = memo(() => (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+    {[
+      { title: 'Product', links: ['Features', 'Pricing', 'Templates', 'Integrations'] },
+      { title: 'Company', links: ['About', 'Blog', 'Careers', 'Contact'] },
+      { title: 'Resources', links: ['Documentation', 'Tutorials', 'API', 'Community'] },
+      { title: 'Legal', links: ['Privacy', 'Terms', 'Cookie Policy', 'GDPR'] },
+    ].map((section) => (
+      <div key={section.title}>
+        <h3 className="text-sm font-semibold mb-4">{section.title}</h3>
+        <ul className="space-y-2">
+          {section.links.map((link) => (
+            <li key={link}>
+              <a
+                href="#"
+                className="text-sm text-foreground/70 hover:text-primary transition-colors"
+              >
+                {link}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+));
+
+const Footer = () => {
+  const currentYear = new Date().getFullYear();
+  const [isVisible, setIsVisible] = useState(false);
+  const [email, setEmail] = useState('');
+  const { resolvedTheme } = useTheme();
+
+  // Use IntersectionObserver to detect when footer is in view
+  const footerRef = useIntersectionObserver<HTMLDivElement>(
+    useCallback(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+      }
+    }, []),
+    { threshold: 0.1 }
+  );
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    // Handle form submission
+    console.log('Submitted email:', email);
+    setEmail('');
+  }, [email]);
+
+  const animationVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: 'easeOut',
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  return (
+    <LazyMotion features={domAnimation}>
+      <motion.footer
+        ref={footerRef}
+        className={cn(
+          'border-t border-foreground/10 bg-background/50 backdrop-blur-sm',
+          'transition-colors duration-300',
+          'py-12 md:py-16 px-4 sm:px-6 lg:px-8'
+        )}
+        initial="hidden"
+        animate={isVisible ? 'visible' : 'hidden'}
+        variants={animationVariants}
+      >
+        <div className="max-w-7xl mx-auto">
+          {/* Newsletter Section */}
+          <m.div 
+            className="mb-12 text-center"
+            variants={animationVariants}
+          >
+            <m.h2 className="text-2xl font-bold mb-4">Stay Updated</m.h2>
+            <m.p className="text-foreground/70 mb-6 max-w-2xl mx-auto">
+              Subscribe to our newsletter for the latest updates and news.
+            </m.p>
+            <m.form 
+              onSubmit={handleSubmit}
+              className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto"
+              variants={animationVariants}
+            >
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 min-w-0"
+                aria-label="Email address"
+              />
+              <Button type="submit" className="whitespace-nowrap">
+                <Mail className="mr-2 h-4 w-4" />
+                Subscribe
+              </Button>
+            </m.form>
+          </m.div>
+
+          {/* Links Section */}
+          <m.div className="mb-12">
+            <FooterLinks />
+          </m.div>
+
+          {/* Bottom Bar */}
+          <m.div 
+            className="pt-8 border-t border-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4"
+            variants={animationVariants}
+          >
+            <p className="text-sm text-foreground/70">
+              © {currentYear} Your Company. All rights reserved.
+            </p>
+            <SocialLinks />
+          </m.div>
+        </div>
+      </motion.footer>
+    </LazyMotion>
+  );
+};
+
+// Custom hook for Intersection Observer
+function useIntersectionObserver<T extends HTMLElement>(
+  callback: (entries: IntersectionObserverEntry[]) => void,
+  options: IntersectionObserverInit = {}
+) {
+  const [node, setNode] = useState<T | null>(null);
+  
+  useEffect(() => {
+    if (!node) return;
+    
+    const observer = new IntersectionObserver(callback, {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1,
+      ...options,
+    });
+    
+    observer.observe(node);
+    
+    return () => observer.disconnect();
+  }, [node, callback, options]);
+  
+  return [setNode] as const;
+}
+
+export default memo(Footer);

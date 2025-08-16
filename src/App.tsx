@@ -1,12 +1,32 @@
-import { useEffect } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { 
+  BrowserRouter, 
+  Routes, 
+  Route, 
+  useLocation, 
+  unstable_HistoryRouter as HistoryRouter,
+  Router
+} from "react-router-dom";
+import { createBrowserHistory } from 'history';
 import { ThemeProvider } from '@/components/theme-provider';
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Lazy load components
+const Index = lazy(() => import('./pages/Index'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Configure router with future flags
+const history = typeof window !== 'undefined' ? createBrowserHistory({
+  // @ts-ignore - future flags are valid but not in the type definitions
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  },
+}) : null;
 
 const queryClient = new QueryClient();
 
@@ -49,24 +69,47 @@ const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <SmoothScroll>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </SmoothScroll>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ThemeProvider>
+console.log('Rendering App component...');
+
+console.log('Rendering App component...');
+
+// Loading component for Suspense fallback
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+  </div>
 );
+
+const App = () => {
+  console.log('Inside App component render');
+  
+  return (
+    <ErrorBoundary>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Suspense fallback={<LoadingFallback />}>
+              <BrowserRouter>
+                <SmoothScroll>
+                  <Routes>
+                    <Route path="/" element={
+                      <ErrorBoundary>
+                        <Index />
+                      </ErrorBoundary>
+                    } />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </SmoothScroll>
+              </BrowserRouter>
+            </Suspense>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;
